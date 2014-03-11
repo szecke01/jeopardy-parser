@@ -1,15 +1,16 @@
-Jeopardy parser
-===============
+Jeopardy parser for MongoDB
+===========================
 
 What is this?
 -------------
 
-Extracts [Jeopardy!] clues from the [J! Archive] website and dumps them into a SQLite database for use elsewhere (no particular application is intended).
+Extracts [Jeopardy!] clues from the [J! Archive] website and dumps them into a MongoDB database for use elsewhere (no particular application is intended).
 
 Python 2.7.5 and SQLite 3.7.12 are tested. Depends on BeautifulSoup 4 and the lxml parser.
 
 Quick start
 -----------
+requires MongoDB, pymongo
 
 ```bash
 pip install beautifulsoup4
@@ -21,6 +22,7 @@ python parser.py
 ```
 
 Thanks to [@knicholes](https://github.com/knicholes) for the Python download script.
+Thanks to [@whymarr](https://github.com/whymarr) for the parser
 
 How long will all this take?
 ----------------------------
@@ -32,53 +34,12 @@ The build script is doing two important things:
 
 The first part takes ~6.5 hours, the second part should take ~20 minutes (on a 1.7 GHz Core i5 w/ 4 GB RAM). Yes, that's a rather long time -- please submit a pull request if you can think of a way to shorten it. In total, running the build script will require ~7 hours.
 
-As an aside: the complete download of the pages is ~300MB, and the resulting database file is ~30MB.
+As an aside: the complete download of the pages is ~350MB, and the resulting database file is ~20MB.
 
 Querying the database
 ---------------------
 
-The database is split into 5 tables:
-
-| Table name        | What it holds                                          |
-| ----------------- | ------------------------------------------------------ |
-| `airdates`        | Airdates for the shows, indexed by game number         |
-| `documents`       | Mappings from clue IDs to clue text and answers        |
-| `categories`      | The categories                                         |
-| `clues`           | Clue IDs with metadata (game number, round, and value) |
-| `classifications` | Mappings from clue IDs to category IDs                 |
-
-To get all the clues along with their metadata:
-
-```sql
-SELECT clues.id, game, round, value, clue, answer
-FROM clues
-JOIN documents ON clues.id = documents.id
--- WHERE <expression>
-;
-```
-
-To get the category that a clue is in, given a clue id:
-
-```sql
-SELECT clue_id, category
-FROM classifications
-JOIN categories ON category_id = categories.id
--- WHERE <expression>
-;
-```
-
-To get everything (although it is better to pick and choose what you're looking for):
-
-```sql
-SELECT clues.id, clues.game, airdate, round, value, category, clue, answer
-FROM clues
-JOIN airdates ON clues.game = airdates.game
-JOIN documents ON clues.id = documents.id
-JOIN classifications ON clues.id = classifications.clue_id
-JOIN categories ON classifications.category_id = categories.id
--- WHERE <expression>
-;
-```
+The database is document based, and stores each game as its own document with an id and airdate as identifiers. Each game has three arrays of categories (one for each round), with each category consisting of a title and an array of each clue. The clues have text, solutions, and point values. 
 
 License
 -------
